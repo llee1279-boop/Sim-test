@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ATU Sim Chart — Peggy Holloway</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f5f7f5;min-height:100vh;font-size:14px;}
+  :root{--green:#4a7c59;--dark:#2d4f38;--gold:#c9a84c;--light:#eef4f0;}
+
+  /* Header */
+  #header{background:var(--dark);padding:11px 20px;display:flex;justify-content:space-between;align-items:center;}
+  #header .title{color:var(--gold);font-weight:800;font-size:15px;letter-spacing:1px;}
+  #header .sub{color:#adc8b5;font-size:11px;}
+  #faculty-btn{background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;padding:6px 13px;cursor:pointer;font-weight:700;font-size:12px;}
+  #faculty-btn.on{background:var(--gold);color:var(--dark);}
+
+  /* Patient Banner */
+  #banner{background:var(--green);padding:9px 20px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;}
+  .banner-name{color:#fff;font-weight:800;font-size:17px;}
+  .banner-sub{color:#c8e6c9;font-size:11px;}
+  .banner-dx{background:rgba(0,0,0,0.2);border-radius:7px;padding:5px 12px;}
+  .banner-dx .dx{color:var(--gold);font-weight:700;font-size:12px;}
+  .banner-dx .code{color:#e8f5e9;font-size:11px;}
+  .banner-allergy{background:#c0392b;border-radius:7px;padding:5px 12px;}
+  .banner-allergy .alabel{color:#fff;font-weight:700;font-size:11px;}
+  .banner-allergy .aitem{color:#ffd7d7;font-size:11px;}
+
+  /* Faculty note bar */
+  #faculty-bar{background:#fff3cd;border-bottom:2px solid #ffc107;padding:7px 20px;display:none;gap:10px;align-items:center;}
+  #faculty-bar.show{display:flex;}
+  #faculty-bar label{font-weight:700;font-size:12px;color:#856404;white-space:nowrap;}
+  #faculty-note{flex:1;border:1px solid #ffc107;border-radius:6px;padding:5px 10px;font-size:13px;background:#fffdf0;}
+
+  /* Tabs */
+  #tabs{background:var(--light);border-bottom:1px solid #ddd;display:flex;overflow-x:auto;}
+  .tab{padding:10px 16px;border:none;cursor:pointer;font-weight:500;border-bottom:3px solid transparent;
+    background:var(--light);color:#666;font-size:13px;position:relative;white-space:nowrap;font-family:inherit;}
+  .tab.active{font-weight:700;border-bottom:3px solid var(--gold);background:#fff;color:var(--dark);}
+  .tab .dot{position:absolute;top:6px;right:5px;width:7px;height:7px;border-radius:50%;background:#e74c3c;display:none;}
+  .tab .dot.show{display:block;}
+
+  /* Content */
+  #content{padding:18px;max-width:900px;margin:0 auto;}
+  .pane{display:none;} .pane.active{display:block;}
+
+  /* Section */
+  .section{margin-bottom:20px;}
+  .section-title{border-left:4px solid var(--green);padding-left:10px;margin-bottom:10px;font-weight:700;color:var(--dark);font-size:12px;text-transform:uppercase;letter-spacing:1px;}
+  .section-title.gold{border-color:var(--gold);}
+  .section-title.red{border-color:#e74c3c;}
+  .section-title.purple{border-color:#8e44ad;}
+
+  /* Cards */
+  .card{background:#fff;border-radius:8px;padding:14px;border:1px solid #e0e0e0;margin-bottom:11px;}
+
+  /* Grid */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .grid-vs{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:11px;margin-bottom:14px;}
+
+  /* Form elements */
+  label.flabel{font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;}
+  label.flabel.green{color:var(--green);}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-family:inherit;}
+  textarea{resize:vertical;}
+
+  /* Sim time box */
+  .simtime-box{background:var(--light);border-radius:7px;padding:10px 14px;border:1px solid var(--green);margin-bottom:14px;}
+  .simtime-box input{font-weight:700;font-size:15px;color:var(--dark);}
+  .simtime-box .hint{font-size:11px;color:#888;margin-top:4px;}
+
+  /* Buttons */
+  .btn{background:var(--green);color:#fff;border:none;border-radius:8px;padding:11px 28px;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit;}
+  .btn:disabled{opacity:0.7;cursor:default;}
+
+  /* Alerts */
+  .alert-banner{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+  .alert-item{display:flex;gap:10px;align-items:flex-start;border-radius:6px;padding:9px 12px;font-size:13px;position:relative;}
+  .alert-item.critical{background:#fff0f0;border:1px solid #e74c3c;border-left:5px solid #e74c3c;color:#922b21;}
+  .alert-item.warning{background:#fff8e6;border:1px solid #f39c12;border-left:5px solid #f39c12;color:#7d6608;}
+  .alert-item .aicon{font-size:16px;flex-shrink:0;}
+  .alert-item .atxt{line-height:1.5;}
+  .alert-item .correctness{position:absolute;top:6px;right:8px;font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px;display:none;}
+  .alert-item .correctness.correct{color:#27ae60;background:#eafaf1;border:1px solid #a9dfbf;}
+  .alert-item .correctness.incorrect{color:#c0392b;background:#fdecea;border:1px solid #f5b7b1;}
+  .faculty-on .correctness{display:inline;}
+  .alert-disclaimer{font-size:12px;color:#888;font-style:italic;padding-left:4px;margin-top:2px;}
+
+  /* VS Log table */
+  .vs-table{width:100%;border-collapse:collapse;font-size:13px;min-width:660px;}
+  .vs-table th{padding:8px 10px;text-align:left;font-weight:600;font-size:12px;background:var(--dark);color:#fff;white-space:nowrap;}
+  .vs-table td{padding:7px 10px;border-bottom:1px solid #eee;}
+  .vs-table tr.latest td{background:#f0f7f2;}
+  .vs-table tr.alt td{background:#f9f9f9;}
+  .latest-badge{margin-left:5px;font-size:10px;background:var(--green);color:#fff;border-radius:3px;padding:1px 5px;}
+  .news-badge{border-radius:4px;padding:2px 8px;font-weight:700;font-size:12px;}
+
+  /* Labs table */
+  .lab-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .lab-table th{padding:8px 13px;text-align:left;font-weight:700;color:var(--dark);font-size:12px;border-bottom:1px solid #ddd;background:var(--light);}
+  .lab-table td{padding:8px 13px;border-bottom:1px solid #f0f0f0;}
+  .lab-table tr.abnormal td{background:#fff8f8;}
+  .status-badge{border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;color:#fff;}
+  .status-normal{background:#27ae60;} .status-low{background:#2980b9;} .status-high{background:#c0392b;} .status-borderline{background:#e67e22;}
+
+  /* MAR flags */
+  .flag{border-radius:5px;padding:5px 10px;font-size:12px;margin-bottom:4px;}
+  .flag.warn{background:#fff3e0;border:1px solid #ffcc80;color:#bf360c;}
+  .flag.ok{background:#f0f7f0;border:1px solid #c8e6c9;color:#2e7d32;}
+
+  /* OBJ list */
+  .obj-item{display:flex;gap:10px;margin-bottom:8px;background:#fff;border-radius:6px;padding:8px 12px;border:1px solid #e8e8e8;}
+  .obj-num{background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+
+  /* SBAR output */
+  #sbar-output{background:#f8fff8;border-radius:8px;padding:16px;border:2px solid var(--green);white-space:pre-wrap;font-size:13px;line-height:1.85;margin-top:12px;display:none;}
+  .debrief-q{background:#fffdf0;border-radius:6px;padding:8px 12px;border:1px solid var(--gold);font-size:13px;margin-bottom:8px;}
+
+  /* Success box */
+  .success-box{background:#f0faf3;border:1px solid #a9dfbf;border-radius:8px;padding:10px 14px;font-size:13px;color:#1e8449;}
+
+  /* AI CDS */
+  #ai-cds-box{background:#faf8ff;border-radius:8px;padding:14px;border:2px solid #8e44ad;white-space:pre-wrap;font-size:13px;line-height:1.75;display:none;}
+
+  /* Footer */
+  footer{background:var(--dark);color:#888;text-align:center;padding:9px 20px;font-size:11px;margin-top:24px;}
+
+  /* Overflow wrapper for tables */
+  .tbl-wrap{overflow-x:auto;}
+
+  @media(max-width:600px){.grid-2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div>
+    <div class="title">ATU SCHOOL OF NURSING</div>
+    <div class="sub">Simulation Clinical Chart — AI-Assisted CDS</div>
+  </div>
+  <button id="faculty-btn" onclick="toggleFaculty()">👩‍🏫 Faculty Mode</button>
+</div>
+
+<!-- PATIENT BANNER -->
+<div id="banner">
+  <div>
+    <div class="banner-name">Margaret "Peggy" Holloway</div>
+    <div class="banner-sub">MRN: ATU-2024-0471 | DOB: 03/14/1962 | 62yo Female | 88 kg | Room ICU-04</div>
+  </div>
+  <div class="banner-dx">
+    <div class="dx">Hypertensive Crisis / Hypertensive Emergency</div>
+    <div class="code">Full Code | Admitted: Today, 0842 | Dr. R. Patel</div>
+  </div>
+  <div class="banner-allergy">
+    <div class="alabel">⚠️ ALLERGIES</div>
+    <div class="aitem">Lisinopril (angioedema)</div>
+    <div class="aitem">Sulfa (rash)</div>
+  </div>
+</div>
+
+<!-- FACULTY NOTE BAR -->
+<div id="faculty-bar">
+  <label>📋 Faculty Note:</label>
+  <input type="text" id="faculty-note" placeholder="Add context, cues, or debrief prompts visible to students..."/>
+</div>
+
+<!-- TABS -->
+<div id="tabs">
+  <button class="tab active" onclick="showTab('overview',this)">Overview</button>
+  <button class="tab" onclick="showTab('vitals',this)">Vital Signs<span class="dot" id="dot-vitals"></span></button>
+  <button class="tab" onclick="showTab('assessment',this)">Assessment<span class="dot" id="dot-assessment"></span></button>
+  <button class="tab" onclick="showTab('labs',this)">Labs</button>
+  <button class="tab" onclick="showTab('mar',this)">MAR</button>
+  <button class="tab" onclick="showTab('sbar',this)">SBAR</button>
+</div>
+
+<!-- CONTENT -->
+<div id="content">
+
+  <!-- ── OVERVIEW ── -->
+  <div class="pane active" id="pane-overview">
+    <div class="section">
+      <div class="section-title">Scenario Context</div>
+      <div class="grid-2">
+        <div class="card">
+          <div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:12px;text-transform:uppercase;">Past Medical History</div>
+          <div style="font-size:13px;line-height:1.8;">
+            • HTN (poorly controlled)<br>• Type 2 DM<br>• CKD Stage 2<br>• Obesity
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:12px;text-transform:uppercase;">Presentation</div>
+          <div style="font-size:13px;line-height:1.7;">
+            Peggy presents via EMS with BP 218/134, severe headache (9/10), blurred vision, and nausea. She ran out of her BP medications 5 days ago. She is anxious and diaphoretic. Her husband reports she was "acting confused" at home prior to arrival.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title gold">Learning Objectives</div>
+      <div class="obj-item"><div class="obj-num">1</div><span>Recognize signs and symptoms of hypertensive emergency vs. urgency</span></div>
+      <div class="obj-item"><div class="obj-num">2</div><span>Prioritize nursing assessment in the hypertensive crisis patient</span></div>
+      <div class="obj-item"><div class="obj-num">3</div><span>Identify appropriate antihypertensive agents and nursing considerations</span></div>
+      <div class="obj-item"><div class="obj-num">4</div><span>Apply the NCSBN Clinical Judgment Model to medication titration decisions</span></div>
+      <div class="obj-item"><div class="obj-num">5</div><span>Communicate effectively using SBAR during acute deterioration</span></div>
+      <div class="obj-item"><div class="obj-num">6</div><span>Critically evaluate clinical decision support alerts — not all alerts are correct</span></div>
+    </div>
+  </div>
+
+  <!-- ── VITALS ── -->
+  <div class="pane" id="pane-vitals">
+    <div class="section">
+      <div class="section-title">Enter Vital Signs</div>
+      <div class="card">
+        <div class="simtime-box">
+          <label class="flabel green">⏱ Simulation Clock Time</label>
+          <input type="text" id="vs-simtime" placeholder="e.g. 0915, T+10 min, Phase 2..."/>
+          <div class="hint">Enter the scenario clock time or phase label for this VS entry.</div>
+        </div>
+        <div class="grid-vs">
+          <div><label class="flabel">SBP (mmHg)</label><input type="number" id="vs-sbp" placeholder="e.g. 218"/></div>
+          <div><label class="flabel">DBP (mmHg)</label><input type="number" id="vs-dbp" placeholder="e.g. 134"/></div>
+          <div><label class="flabel">HR (bpm)</label><input type="number" id="vs-hr" placeholder="e.g. 102"/></div>
+          <div><label class="flabel">RR (/min)</label><input type="number" id="vs-rr" placeholder="e.g. 20"/></div>
+          <div><label class="flabel">SpO2 (%)</label><input type="number" id="vs-spo2" placeholder="e.g. 96"/></div>
+          <div><label class="flabel">Temp (°C)</label><input type="number" step="0.1" id="vs-temp" placeholder="e.g. 37.2"/></div>
+          <div><label class="flabel">Pain (0–10)</label><input type="number" id="vs-pain" placeholder="e.g. 9"/></div>
+          <div>
+            <label class="flabel">AVPU</label>
+            <select id="vs-avpu">
+              <option value="A">Alert</option>
+              <option value="V">Voice</option>
+              <option value="P">Pain</option>
+              <option value="U">Unresponsive</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" onclick="submitVitals()">Submit Vitals</button>
+      </div>
+    </div>
+
+    <div class="section" id="vs-alert-section" style="display:none;">
+      <div class="section-title red">Clinical Alerts</div>
+      <div class="alert-banner" id="vs-alert-banner"></div>
+    </div>
+
+    <div class="section" id="ai-cds-section" style="display:none;">
+      <div class="section-title purple">AI Clinical Decision Support</div>
+      <div id="ai-cds-box"></div>
+    </div>
+
+    <div class="section" id="vs-log-section" style="display:none;">
+      <div class="section-title" id="vs-log-title">Vital Signs Log</div>
+      <div class="tbl-wrap">
+        <table class="vs-table">
+          <thead>
+            <tr><th>Sim Time</th><th>Wall Time</th><th>BP</th><th>HR</th><th>RR</th><th>SpO2</th><th>Temp</th><th>Pain</th><th>AVPU</th><th>NEWS2</th></tr>
+          </thead>
+          <tbody id="vs-log-body"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:#888;margin-top:5px;">Sim Time = scenario clock. Wall Time = real clock. Abnormal values color-coded.</div>
+    </div>
+  </div>
+
+  <!-- ── ASSESSMENT ── -->
+  <div class="pane" id="pane-assessment">
+    <div class="section">
+      <div class="section-title">Head-to-Toe Assessment</div>
+      <div class="card"><label class="flabel green">Neurological</label><textarea id="a-neuro" rows="2" placeholder="LOC, orientation, pupils, headache, visual changes, confusion..."></textarea></div>
+      <div class="card"><label class="flabel green">Cardiovascular</label><textarea id="a-cardiac" rows="2" placeholder="Heart sounds, pulses, edema, capillary refill, chest pain/pressure..."></textarea></div>
+      <div class="card"><label class="flabel green">Respiratory</label><textarea id="a-resp" rows="2" placeholder="Breath sounds, work of breathing, O2 delivery, dyspnea, wheezing..."></textarea></div>
+      <div class="card"><label class="flabel green">GI / Abdomen</label><textarea id="a-gi" rows="2" placeholder="Bowel sounds, nausea, vomiting, last BM, oral intake..."></textarea></div>
+      <div class="card"><label class="flabel green">GU / Renal</label><textarea id="a-gu" rows="2" placeholder="Urine output (ml/hr), color, foley status, edema..."></textarea></div>
+      <div class="card"><label class="flabel green">Skin / IV Access</label><textarea id="a-skin" rows="2" placeholder="Color, temp, diaphoresis, IV site condition, skin integrity..."></textarea></div>
+      <div class="card"><label class="flabel green">Interventions / Additional Notes</label><textarea id="a-notes" rows="2" placeholder="Actions taken, orders received, patient response..."></textarea></div>
+      <div style="margin-top:14px;"><button class="btn" onclick="submitAssessment()">Submit Assessment</button></div>
+    </div>
+
+    <div class="section" id="assess-alert-section" style="display:none;">
+      <div class="section-title red">Assessment Alerts</div>
+      <div class="alert-banner" id="assess-alert-banner"></div>
+    </div>
+    <div id="assess-ok-box" style="display:none;" class="success-box">✅ No assessment alerts flagged. Continue monitoring.</div>
+  </div>
+
+  <!-- ── LABS ── -->
+  <div class="pane" id="pane-labs">
+    <div class="section">
+      <div class="section-title">BMP</div>
+      <div class="tbl-wrap"><table class="lab-table">
+        <thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Na</td><td>138</td><td>mEq/L</td><td>136–145</td><td><span class="status-badge status-normal">WNL</span></td></tr>
+          <tr class="abnormal"><td>K</td><td style="color:#2980b9;font-weight:700;">3.3</td><td>mEq/L</td><td>3.5–5.0</td><td><span class="status-badge status-low">LOW</span></td></tr>
+          <tr class="abnormal"><td>Creatinine</td><td style="color:#c0392b;font-weight:700;">1.6</td><td>mg/dL</td><td>0.6–1.2</td><td><span class="status-badge status-high">HIGH</span></td></tr>
+          <tr class="abnormal"><td>BUN</td><td style="color:#c0392b;font-weight:700;">28</td><td>mg/dL</td><td>7–20</td><td><span class="status-badge status-high">HIGH</span></td></tr>
+          <tr class="abnormal"><td>Glucose</td><td style="color:#c0392b;font-weight:700;">188</td><td>mg/dL</td><td>70–100</td><td><span class="status-badge status-high">HIGH</span></td></tr>
+          <tr class="abnormal"><td>CO2</td><td style="color:#2980b9;font-weight:700;">21</td><td>mEq/L</td><td>22–29</td><td><span class="status-badge status-low">LOW</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="section">
+      <div class="section-title">CBC</div>
+      <div class="tbl-wrap"><table class="lab-table">
+        <thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr class="abnormal"><td>WBC</td><td style="color:#c0392b;font-weight:700;">11.2</td><td>K/µL</td><td>4.5–11.0</td><td><span class="status-badge status-high">HIGH</span></td></tr>
+          <tr class="abnormal"><td>Hgb</td><td style="color:#2980b9;font-weight:700;">11.8</td><td>g/dL</td><td>12–16</td><td><span class="status-badge status-low">LOW</span></td></tr>
+          <tr><td>Platelets</td><td>198</td><td>K/µL</td><td>150–400</td><td><span class="status-badge status-normal">WNL</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Cardiac Markers</div>
+      <div class="tbl-wrap"><table class="lab-table">
+        <thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr class="abnormal"><td>Troponin I</td><td style="color:#e67e22;font-weight:700;">0.04</td><td>ng/mL</td><td>&lt;0.04</td><td><span class="status-badge status-borderline">BORDERLINE</span></td></tr>
+          <tr class="abnormal"><td>BNP</td><td style="color:#c0392b;font-weight:700;">312</td><td>pg/mL</td><td>&lt;100</td><td><span class="status-badge status-high">HIGH</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Urinalysis</div>
+      <div class="tbl-wrap"><table class="lab-table">
+        <thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr class="abnormal"><td>Protein</td><td style="color:#c0392b;font-weight:700;">2+</td><td></td><td>Neg</td><td><span class="status-badge status-high">HIGH</span></td></tr>
+          <tr class="abnormal"><td>RBC</td><td style="color:#c0392b;font-weight:700;">5-10</td><td>/hpf</td><td>0-2</td><td><span class="status-badge status-high">HIGH</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ── MAR ── -->
+  <div class="pane" id="pane-mar">
+    <div class="section">
+      <div class="section-title">Medication Administration Record</div>
+      <div class="card">
+        <div style="font-weight:700;color:var(--dark);font-size:14px;">Nicardipine (Cardene)</div>
+        <div style="font-size:13px;color:#555;margin:4px 0 10px;">5 mg/hr IV — IV infusion</div>
+        <div class="flag ok">✓ Titrate per protocol</div>
+        <div class="flag ok">✓ Monitor BP q5min during titration</div>
+        <div class="flag warn">⚠️ Hold if SBP &lt;140</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;color:var(--dark);font-size:14px;">Labetalol (Normodyne)</div>
+        <div style="font-size:13px;color:#555;margin:4px 0 10px;">20 mg IVP — IV push over 2 min</div>
+        <div class="flag warn">⚠️ Contraindicated in bronchospasm/asthma</div>
+        <div class="flag warn">⚠️ Hold if HR &lt;60</div>
+        <div class="flag warn">⚠️ Do not use in acute HF</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;color:var(--dark);font-size:14px;">Hydralazine</div>
+        <div style="font-size:13px;color:#555;margin:4px 0 10px;">10 mg IV q4-6h PRN — IV push</div>
+        <div class="flag warn">⚠️ Avoid in dissection</div>
+        <div class="flag ok">✓ Onset 10-30 min — do not repeat early</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;color:var(--dark);font-size:14px;">Metoprolol (Lopressor)</div>
+        <div style="font-size:13px;color:#555;margin:4px 0 10px;">5 mg IV q5min x3 — IV push</div>
+        <div class="flag warn">⚠️ Hold if HR &lt;60 or SBP &lt;100</div>
+        <div class="flag warn">⚠️ Contraindicated in decompensated HF</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;color:var(--dark);font-size:14px;">Furosemide (Lasix)</div>
+        <div style="font-size:13px;color:#555;margin:4px 0 10px;">40 mg IV — IV push</div>
+        <div class="flag ok">✓ Monitor urine output</div>
+        <div class="flag warn">⚠️ Check K+ before repeat dosing</div>
+        <div class="flag warn">⚠️ Caution in CKD</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;color:var(--dark);font-size:14px;">Sodium Nitroprusside</div>
+        <div style="font-size:13px;color:#555;margin:4px 0 10px;">0.3 mcg/kg/min IV — IV infusion</div>
+        <div class="flag warn">⚠️ LIGHT SENSITIVE — wrap tubing</div>
+        <div class="flag warn">⚠️ Risk of cyanide toxicity &gt;72hr</div>
+        <div class="flag warn">⚠️ Requires arterial line monitoring ideally</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SBAR ── -->
+  <div class="pane" id="pane-sbar">
+    <div class="section">
+      <div class="section-title">SBAR Generator</div>
+      <div class="card">
+        <p style="font-size:13px;color:#555;margin-bottom:14px;line-height:1.6;">Generates a nurse-to-physician SBAR using current chart data, logged vitals, and assessment findings. Complete the Assessment tab first for best results.</p>
+        <button class="btn" id="sbar-btn" onclick="generateSBAR()">Generate SBAR</button>
+      </div>
+      <div id="sbar-output"></div>
+    </div>
+    <div class="section" id="debrief-section" style="display:none;">
+      <div class="section-title gold">Faculty Debrief Triggers</div>
+      <div class="debrief-q"><strong>Q1:</strong> Did the student identify hypertensive emergency vs. urgency criteria?</div>
+      <div class="debrief-q"><strong>Q2:</strong> Was the BP reduction goal stated correctly? (Reduce MAP ≤25% in first hour; target SBP ~160 in 2–6 hrs)</div>
+      <div class="debrief-q"><strong>Q3:</strong> Did the student recognize end-organ damage signs (neuro, renal, cardiac)?</div>
+      <div class="debrief-q"><strong>Q4:</strong> Was medication selection appropriate given allergies (Lisinopril ACE-I) and CKD?</div>
+      <div class="debrief-q"><strong>Q5:</strong> Did the student question or hold labetalol if respiratory findings were present?</div>
+      <div class="debrief-q"><strong>Q6:</strong> Which alert(s) did the student identify as incorrect? Did they explain why?</div>
+      <div class="debrief-q"><strong>Q7:</strong> Did SBAR include situation, baseline, current assessment, and a specific request?</div>
+      <div class="debrief-q"><strong>Q8:</strong> Which step of the CJM appeared least confident in this student?</div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<footer>ATU School of Nursing — Simulation Program | For educational use only | AI-powered clinical decision support</footer>
+
+<script>
+const API_URL = "https://api.anthropic.com/v1/messages";
+let facultyOn = false;
+let vsLog = [];
+let vsAlerts = [];
+let assessAlerts = [];
+
+// ── Tab switching ──────────────────────────────────────────────────
+function showTab(id, btn) {
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('pane-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Faculty mode ───────────────────────────────────────────────────
+function toggleFaculty() {
+  facultyOn = !facultyOn;
+  const btn = document.getElementById('faculty-btn');
+  const bar = document.getElementById('faculty-bar');
+  const debriefSection = document.getElementById('debrief-section');
+  btn.textContent = facultyOn ? '👩‍🏫 Faculty ON' : '👩‍🏫 Faculty Mode';
+  btn.className = facultyOn ? 'on' : '';
+  bar.className = facultyOn ? 'show' : '';
+  debriefSection.style.display = facultyOn ? 'block' : 'none';
+  // Refresh alert badges
+  renderAlerts('vs-alert-banner', vsAlerts);
+  renderAlerts('assess-alert-banner', assessAlerts);
+}
+
+// ── NEWS2 ──────────────────────────────────────────────────────────
+function calcNEWS2(v) {
+  let s = 0;
+  const sbp = parseFloat(v.sbp), rr = parseFloat(v.rr), spo2 = parseFloat(v.spo2);
+  const hr = parseFloat(v.hr), temp = parseFloat(v.temp);
+  if (v.sbp) { if(sbp<=90)s+=3; else if(sbp<=100)s+=2; else if(sbp<=110)s+=1; else if(sbp>=220)s+=3; }
+  if (v.rr)  { if(rr<=8)s+=3;   else if(rr<=11)s+=1;  else if(rr>=25)s+=3;   else if(rr>=21)s+=2; }
+  if (v.spo2){ if(spo2<=91)s+=3; else if(spo2<=93)s+=2; else if(spo2<=95)s+=1; }
+  if (v.hr)  { if(hr<=40)s+=3;  else if(hr<=50)s+=1;   else if(hr>=131)s+=3;  else if(hr>=111)s+=2; else if(hr>=91)s+=1; }
+  if (v.temp){ if(temp<=35.0)s+=3; else if(temp<=36.0)s+=1; else if(temp>=39.1)s+=2; else if(temp>=38.1)s+=1; }
+  if (v.avpu && v.avpu !== 'A') s += 3;
+  return s;
+}
+
+function newsColor(score) {
+  if (score >= 7) return {bg:'#c0392b',fg:'#fff'};
+  if (score >= 5) return {bg:'#e67e22',fg:'#fff'};
+  if (score >= 1) return {bg:'#f39c12',fg:'#333'};
+  return {bg:'#27ae60',fg:'#fff'};
+}
+
+// ── VS Alert Engine ────────────────────────────────────────────────
+function getVSAlerts(v) {
+  const alerts = [];
+  const sbp = parseFloat(v.sbp), dbp = parseFloat(v.dbp);
+  const hr = parseFloat(v.hr), rr = parseFloat(v.rr);
+  const spo2 = parseFloat(v.spo2), temp = parseFloat(v.temp);
+  const pain = parseFloat(v.pain);
+
+  if (v.sbp) {
+    if (sbp >= 180) alerts.push({level:'critical', text:`SBP ${v.sbp} mmHg — Hypertensive emergency threshold met. Immediate provider notification required.`, correct:true});
+    else if (sbp >= 140) alerts.push({level:'warning', text:`SBP ${v.sbp} mmHg — Elevated. Monitor trend and reassess medication response.`, correct:true});
+    else if (sbp < 90) alerts.push({level:'critical', text:`SBP ${v.sbp} mmHg — Hypotension. Hold antihypertensives. Notify provider.`, correct:true});
+    else if (sbp < 100) alerts.push({level:'warning', text:`SBP ${v.sbp} mmHg — Low-normal. Reassess before next antihypertensive dose.`, correct:true});
+    if (sbp >= 180) alerts.push({level:'warning', text:`SBP ${v.sbp} mmHg — Consider administering scheduled oral antihypertensive now to begin lowering BP rapidly.`, correct:false});
+  }
+  if (v.dbp && dbp >= 120)
+    alerts.push({level:'critical', text:`DBP ${v.dbp} mmHg — Diastolic crisis range. Assess for end-organ damage (neuro, renal, cardiac).`, correct:true});
+  if (v.hr) {
+    if (hr > 120) alerts.push({level:'critical', text:`HR ${v.hr} bpm — Tachycardia. Consider cause: pain, anxiety, medication effect, volume status.`, correct:true});
+    else if (hr > 100) alerts.push({level:'warning', text:`HR ${v.hr} bpm — Elevated. Reassess pain, anxiety, and hydration.`, correct:true});
+    else if (hr < 50) alerts.push({level:'critical', text:`HR ${v.hr} bpm — Bradycardia. Hold beta-blockers (labetalol, metoprolol). Notify provider.`, correct:true});
+    else if (hr < 60) alerts.push({level:'warning', text:`HR ${v.hr} bpm — Low-normal. Do not administer labetalol or metoprolol without re-evaluation.`, correct:true});
+    if (hr > 100) alerts.push({level:'warning', text:`HR ${v.hr} bpm — Tachycardia in hypertensive patient. Administer 500 mL NS bolus to improve cardiac output.`, correct:false});
+  }
+  if (v.rr) {
+    if (rr > 24) alerts.push({level:'critical', text:`RR ${v.rr} — Tachypnea. Assess respiratory effort, O2 saturation, and lung sounds.`, correct:true});
+    else if (rr > 20) alerts.push({level:'warning', text:`RR ${v.rr} — Mildly elevated. Monitor closely; may reflect pain, anxiety, or early pulmonary edema.`, correct:true});
+    else if (rr < 10) alerts.push({level:'critical', text:`RR ${v.rr} — Bradypnea. Assess airway and neurological status immediately.`, correct:true});
+  }
+  if (v.spo2) {
+    if (spo2 < 90) alerts.push({level:'critical', text:`SpO2 ${v.spo2}% — Critical hypoxemia. Apply/increase O2, notify provider immediately.`, correct:true});
+    else if (spo2 < 95) alerts.push({level:'warning', text:`SpO2 ${v.spo2}% — Below goal. Increase O2 delivery; reassess lung sounds for crackles.`, correct:true});
+    if (spo2 >= 90 && spo2 < 95) alerts.push({level:'warning', text:`SpO2 ${v.spo2}% — Titrate O2 to maintain SpO2 ≥ 99% to optimize cerebral perfusion during hypertensive crisis.`, correct:false});
+  }
+  if (v.temp) {
+    if (temp > 38.3) alerts.push({level:'warning', text:`Temp ${v.temp}°C — Fever. Consider infectious workup. Meets SIRS temperature criterion.`, correct:true});
+    else if (temp < 36.0) alerts.push({level:'warning', text:`Temp ${v.temp}°C — Hypothermia. Assess for sepsis or environmental exposure.`, correct:true});
+  }
+  if (v.avpu && v.avpu !== 'A') {
+    alerts.push({level:'critical', text:`AVPU: ${v.avpu} — Altered neurological status. Hypertensive encephalopathy possible. Notify provider immediately.`, correct:true});
+    alerts.push({level:'warning', text:`AVPU: ${v.avpu} — Altered LOC. Position patient flat (supine without head elevation) to maximize cerebral blood flow.`, correct:false});
+  }
+  if (v.pain && pain >= 8)
+    alerts.push({level:'warning', text:`Pain ${v.pain}/10 — Severe pain. Uncontrolled pain contributes to BP elevation. Assess and address comfort.`, correct:true});
+  if (v.sbp && v.dbp && sbp >= 180 && dbp >= 120)
+    alerts.push({level:'critical', text:`🚨 BP meets hypertensive emergency criteria. Target: reduce MAP by no more than 10–15% in first hour. Avoid rapid correction.`, correct:true});
+  if (v.sbp && v.avpu && sbp >= 180 && v.avpu !== 'A')
+    alerts.push({level:'critical', text:`🚨 SBP ≥180 + altered mentation — hypertensive encephalopathy pattern. Urgent provider notification required.`, correct:true});
+  return alerts;
+}
+
+// ── Assessment Alert Engine ────────────────────────────────────────
+function getAssessmentAlerts(a) {
+  const alerts = [];
+  function check(text, keywords, level, msg, correct) {
+    if (!text) return;
+    if (keywords.some(k => text.toLowerCase().includes(k))) alerts.push({level, text:msg, correct});
+  }
+  check(a.neuro, ['confused','confusion','disoriented','altered','encephalopathy'],
+    'critical','Neuro: Altered mentation documented — consistent with hypertensive encephalopathy. Notify provider. Seizure precautions.',true);
+  check(a.neuro, ['headache','head pain','head ache'],
+    'warning','Neuro: Headache present — cardinal symptom of hypertensive emergency. Correlate with BP and neuro assessment.',true);
+  check(a.neuro, ['visual','blurred','vision','blind'],
+    'critical','Neuro: Visual disturbance documented — end-organ damage to retinal/cerebral vasculature possible. Urgent evaluation.',true);
+  check(a.neuro, ['confused','confusion','disoriented','altered'],
+    'warning','Neuro: Altered LOC with hypertension. Administer IV lorazepam 2 mg now to reduce cerebral hyperexcitability.',false);
+  check(a.resp, ['crackle','rales','pulmonary edema','wet','fluid'],
+    'critical','Resp: Crackles/pulmonary edema signs documented — acute hypertensive pulmonary edema possible. Notify provider; anticipate diuresis.',true);
+  check(a.resp, ['wheeze','wheezing','bronchospasm'],
+    'critical','Resp: Wheezing documented — CONTRAINDICATION to labetalol and metoprolol. Do not administer. Notify provider.',true);
+  check(a.resp, ['dyspnea','short of breath','sob','labored','difficulty breathing'],
+    'warning','Resp: Dyspnea noted. Assess lung sounds, position HOB 30–45°, reassess O2 saturation.',true);
+  check(a.resp, ['dyspnea','short of breath','sob'],
+    'warning','Resp: Dyspnea in hypertensive crisis. Aggressive IV fluid resuscitation recommended to reduce afterload.',false);
+  check(a.cardiac, ['chest pain','chest pressure','chest tightness','chest discomfort'],
+    'critical','Cardiac: Chest pain/pressure documented — ACS must be ruled out. 12-lead ECG and troponin trend indicated.',true);
+  check(a.cardiac, ['edema','swelling','s3','gallop','jugular','jvd'],
+    'warning','Cardiac: Volume overload signs noted. Correlate with BNP 312. Monitor urine output; diuresis may be indicated.',true);
+  check(a.cardiac, ['palpitation','irregular','skipping'],
+    'warning','Cardiac: Palpitations/irregularity noted. Correlate with K+ 3.3 mEq/L — dysrhythmia risk elevated.',true);
+  check(a.cardiac, ['chest pain','chest pressure','chest discomfort'],
+    'warning','Cardiac: Chest pain with hypertension. Rapidly lower SBP to <120 mmHg within 30 minutes to reduce myocardial oxygen demand.',false);
+  check(a.gu, ['no urine','anuria','oliguria','decreased urine','low output','< 30','<30','30 ml','30ml'],
+    'critical','GU: Decreased urine output — acute kidney injury possible in setting of hypertensive crisis and CKD Stage 2. Notify provider; strict I&O.',true);
+  check(a.gu, ['hematuria','blood','tea','cola','dark urine'],
+    'warning','GU: Abnormal urine color — correlates with UA RBC 5–10/hpf. Monitor renal function and trend creatinine.',true);
+  check(a.skin, ['diaphoretic','diaphoresis','clammy','sweating','moist'],
+    'warning','Skin: Diaphoresis noted — sympathetic activation consistent with hypertensive emergency. Monitor hemodynamic status.',true);
+  check(a.skin, ['pale','pallor','mottled','cool extremities'],
+    'warning','Skin: Pallor/mottling noted — assess perfusion; correlate with BP and HR trend.',true);
+  return alerts;
+}
+
+// ── Render Alerts ──────────────────────────────────────────────────
+function renderAlerts(containerId, alerts) {
+  const container = document.getElementById(containerId);
+  if (!alerts.length) { container.innerHTML = ''; return; }
+  let html = '';
+  alerts.forEach(a => {
+    const icon = a.level === 'critical' ? '🔴' : '🟡';
+    const cLabel = a.correct ? '✓ CORRECT' : '✗ INCORRECT';
+    const cClass = a.correct ? 'correct' : 'incorrect';
+    html += `<div class="alert-item ${a.level} ${facultyOn ? 'faculty-on' : ''}">
+      <span class="aicon">${icon}</span>
+      <span class="atxt">${a.text}</span>
+      <span class="correctness ${cClass}">${cLabel}</span>
+    </div>`;
+  });
+  const hasIncorrect = alerts.some(a => !a.correct);
+  if (!facultyOn && hasIncorrect) {
+    html += `<div class="alert-disclaimer">⚠️ Clinical alerts may contain errors. Verify all recommendations against evidence-based practice.</div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ── Submit Vitals ──────────────────────────────────────────────────
+async function submitVitals() {
+  const v = {
+    simTime: document.getElementById('vs-simtime').value.trim() || '—',
+    sbp: document.getElementById('vs-sbp').value,
+    dbp: document.getElementById('vs-dbp').value,
+    hr:  document.getElementById('vs-hr').value,
+    rr:  document.getElementById('vs-rr').value,
+    spo2:document.getElementById('vs-spo2').value,
+    temp:document.getElementById('vs-temp').value,
+    pain:document.getElementById('vs-pain').value,
+    avpu:document.getElementById('vs-avpu').value,
+  };
+  if (!v.sbp && !v.hr) { alert('Enter at least SBP or HR.'); return; }
+
+  const news = calcNEWS2(v);
+  const wallTime = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  vsLog.unshift({...v, wallTime, news});
+  vsAlerts = getVSAlerts(v);
+
+  // Clear fields
+  ['vs-simtime','vs-sbp','vs-dbp','vs-hr','vs-rr','vs-spo2','vs-temp','vs-pain'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('vs-avpu').value = 'A';
+
+  // Render alerts
+  const alertSection = document.getElementById('vs-alert-section');
+  if (vsAlerts.length) {
+    alertSection.style.display = 'block';
+    renderAlerts('vs-alert-banner', vsAlerts);
+    document.getElementById('dot-vitals').classList.add('show');
+  }
+
+  // Rebuild log
+  buildVSLog();
+
+  // AI CDS if critical
+  if (vsAlerts.some(a => a.level === 'critical')) {
+    await callAICDS(v, news);
+  } else {
+    document.getElementById('ai-cds-section').style.display = 'none';
+  }
+}
+
+function buildVSLog() {
+  const logSection = document.getElementById('vs-log-section');
+  const body = document.getElementById('vs-log-body');
+  const title = document.getElementById('vs-log-title');
+  if (!vsLog.length) { logSection.style.display = 'none'; return; }
+  logSection.style.display = 'block';
+  title.textContent = `Vital Signs Log — ${vsLog.length} ${vsLog.length===1?'entry':'entries'}`;
+  body.innerHTML = vsLog.map((e, i) => {
+    const sbp = parseFloat(e.sbp);
+    const bpColor = sbp >= 180 ? '#e74c3c' : sbp < 90 ? '#2980b9' : '#333';
+    const hrColor = (parseFloat(e.hr) > 100 || parseFloat(e.hr) < 60) ? '#e67e22' : '#333';
+    const rrColor = parseFloat(e.rr) > 20 ? '#e67e22' : '#333';
+    const spo2Color = parseFloat(e.spo2) < 95 ? '#e74c3c' : '#333';
+    const painColor = parseFloat(e.pain) >= 7 ? '#e74c3c' : '#333';
+    const avpuColor = e.avpu !== 'A' ? '#e74c3c' : '#333';
+    const nc = newsColor(e.news);
+    const rowClass = i === 0 ? 'latest' : (i % 2 === 0 ? 'alt' : '');
+    const badge = i === 0 ? '<span class="latest-badge">LATEST</span>' : '';
+    return `<tr class="${rowClass}">
+      <td style="font-weight:700;color:var(--green);">${e.simTime}${badge}</td>
+      <td style="color:#999;font-size:12px;">${e.wallTime}</td>
+      <td style="font-weight:700;color:${bpColor};">${e.sbp}/${e.dbp}</td>
+      <td style="color:${hrColor};">${e.hr}</td>
+      <td style="color:${rrColor};">${e.rr}</td>
+      <td style="color:${spo2Color};">${e.spo2}%</td>
+      <td>${e.temp}</td>
+      <td style="color:${painColor};">${e.pain}/10</td>
+      <td style="color:${avpuColor};font-weight:${e.avpu!=='A'?700:400};">${e.avpu}</td>
+      <td><span class="news-badge" style="background:${nc.bg};color:${nc.fg};">${e.news}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── AI CDS ─────────────────────────────────────────────────────────
+async function callAICDS(v, news) {
+  const cdsSection = document.getElementById('ai-cds-section');
+  const cdsBox = document.getElementById('ai-cds-box');
+  cdsSection.style.display = 'block';
+  cdsBox.style.display = 'block';
+  cdsBox.textContent = '⏳ Generating clinical priorities...';
+
+  const abnormalLabs = 'Creatinine 1.6 mg/dL, K 3.3 mEq/L, Troponin 0.04 ng/mL, BNP 312 pg/mL, Glucose 188 mg/dL, Proteinuria 2+';
+  try {
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`You are a clinical decision support tool in a nursing simulation lab at Arkansas Tech University.
+Patient: Margaret Holloway, 62yo female. Dx: Hypertensive Crisis/Emergency.
+PMH: HTN, T2DM, CKD Stage 2, Obesity. Allergies: Lisinopril (angioedema), Sulfa (rash).
+Abnormal labs: ${abnormalLabs}. Active meds: Nicardipine infusion, Labetalol PRN, Furosemide.
+Generate 4–5 concise bullet-point nursing priorities using:
+🔴 immediate action, 🟠 urgent, 🟡 monitor, 💊 medication consideration.
+End with ONE CJM clinical judgment prompt question for the student.
+Be direct. Simulation learning context. No lengthy explanations.`,
+        messages:[{role:'user',content:`Sim time: ${v.simTime}. BP ${v.sbp}/${v.dbp}, HR ${v.hr}, RR ${v.rr}, SpO2 ${v.spo2}%, Temp ${v.temp}°C, AVPU ${v.avpu}, Pain ${v.pain}/10. NEWS2: ${news}.`}]
+      })
+    });
+    const data = await res.json();
+    const txt = data.content && data.content.find(b => b.type === 'text');
+    cdsBox.textContent = txt ? txt.text : '⚠️ Unable to generate response.';
+  } catch(e) {
+    cdsBox.textContent = '⚠️ AI CDS unavailable — use clinical judgment.';
+  }
+}
+
+// ── Submit Assessment ──────────────────────────────────────────────
+function submitAssessment() {
+  const a = {
+    neuro:  document.getElementById('a-neuro').value,
+    cardiac:document.getElementById('a-cardiac').value,
+    resp:   document.getElementById('a-resp').value,
+    gi:     document.getElementById('a-gi').value,
+    gu:     document.getElementById('a-gu').value,
+    skin:   document.getElementById('a-skin').value,
+    notes:  document.getElementById('a-notes').value,
+  };
+  assessAlerts = getAssessmentAlerts(a);
+  const section = document.getElementById('assess-alert-section');
+  const okBox = document.getElementById('assess-ok-box');
+  if (assessAlerts.length) {
+    section.style.display = 'block';
+    okBox.style.display = 'none';
+    renderAlerts('assess-alert-banner', assessAlerts);
+    document.getElementById('dot-assessment').classList.add('show');
+  } else if (Object.values(a).some(v => v.trim())) {
+    section.style.display = 'none';
+    okBox.style.display = 'block';
+  }
+}
+
+// ── SBAR ───────────────────────────────────────────────────────────
+async function generateSBAR() {
+  const btn = document.getElementById('sbar-btn');
+  const output = document.getElementById('sbar-output');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+  output.style.display = 'none';
+
+  const latest = vsLog[0] || {};
+  const neuro  = document.getElementById('a-neuro').value || 'not documented';
+  const cardiac= document.getElementById('a-cardiac').value || 'not documented';
+  const resp   = document.getElementById('a-resp').value || 'not documented';
+  const gu     = document.getElementById('a-gu').value || 'not documented';
+
+  try {
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:800,
+        system:'Generate a nurse-to-physician SBAR for a nursing simulation. Concise and clinically accurate. Use S / B / A / R headers.',
+        messages:[{role:'user',content:`Patient: Margaret "Peggy" Holloway, 62yo, Hypertensive Crisis/Emergency. Room ICU-04.
+Most recent VS (sim time ${latest.simTime||'—'}): BP ${latest.sbp||'ND'}/${latest.dbp||''}, HR ${latest.hr||''}, RR ${latest.rr||''}, SpO2 ${latest.spo2||''}%, Temp ${latest.temp||''}°C, Pain ${latest.pain||''}/10.
+Abnormal labs: Creatinine 1.6, K 3.3, Troponin 0.04, BNP 312, Glucose 188, Proteinuria 2+.
+Neuro: ${neuro}. Cardiac: ${cardiac}. Resp: ${resp}. GU: ${gu}.
+Active meds: Nicardipine infusion. PMH: HTN, T2DM, CKD Stage 2. Allergies: Lisinopril, Sulfa. NEWS2: ${latest.news??'—'}.`}]
+      })
+    });
+    const data = await res.json();
+    const txt = data.content && data.content.find(b => b.type === 'text');
+    output.textContent = txt ? txt.text : 'Unable to generate SBAR.';
+    output.style.display = 'block';
+  } catch(e) {
+    output.textContent = '⚠️ SBAR generation unavailable.';
+    output.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Generate SBAR';
+}
+</script>
+</body>
+</html>
